@@ -1,0 +1,548 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GeoQuest 3D</title>
+<style>
+:root{--bg1:#ffe6f4;--bg2:#d9f3ff;--panel:#ffffff;--ink:#251a52;--mut:#6a5fa3;--line:#e4dcff;--a1:#ff2e93;--a2:#00b8e6;--a3:#ffb800;--a4:#22c55e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a0f5c;--bg2:#06263f;--panel:#1a1240;--ink:#f6f1ff;--mut:#b9aee6;--line:#33266e;--a1:#ff4fa8;--a2:#22d3ee;--a3:#ffd23f;--a4:#7cff6b}}
+:root[data-theme="dark"]{--bg1:#2a0f5c;--bg2:#06263f;--panel:#1a1240;--ink:#f6f1ff;--mut:#b9aee6;--line:#33266e;--a1:#ff4fa8;--a2:#22d3ee;--a3:#ffd23f;--a4:#7cff6b}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg1)}
+#app{display:grid;height:100%;grid-template-rows:38% 62%}
+@media(min-width:820px){#app{grid-template-rows:none;grid-template-columns:1fr minmax(420px,34vw)}}
+#view{position:relative;background:radial-gradient(circle at 25% 20%,var(--bg1),var(--bg2));overflow:hidden;min-height:0}
+canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#hint{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--mut)}
+#hud{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap}
+#hud i{font-style:normal;font-weight:700;background:var(--panel);border:2px solid var(--a1);border-radius:99px;padding:3px 11px;box-shadow:0 3px 0 var(--a1)}
+#toast{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:24px;font-weight:800;color:var(--a3);text-shadow:0 2px 0 var(--a1),0 0 18px var(--a1);opacity:0;pointer-events:none;white-space:nowrap}
+#toast.pop{animation:pop 1.1s ease-out}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}20%{opacity:1;transform:translate(-50%,0) scale(1.15)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px) scale(1)}}
+aside{background:var(--panel);overflow:auto;padding:12px 14px 20px;border-top:3px solid var(--a1)}
+@media(min-width:820px){aside{border-top:0;border-left:3px solid var(--a1)}}
+h1{margin:0 0 8px;font-size:22px;background:linear-gradient(90deg,var(--a1),var(--a3),var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{flex:1;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:7px 4px;font-weight:700;cursor:pointer}
+.tabs button.on{background:linear-gradient(135deg,var(--a1),var(--a3));color:#fff;border-color:transparent;text-shadow:0 1px 2px #0005}
+h3{margin:12px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.b{border:0;border-radius:10px;padding:8px 10px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--a2),#6d5dfc);cursor:pointer;box-shadow:0 3px 0 #0003}
+.b:active{transform:translateY(2px);box-shadow:none}.b.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+.b.hot{background:linear-gradient(135deg,var(--a1),#ff7a1a)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rot{display:flex;flex-direction:column;gap:4px;align-items:stretch}.rot b{text-align:center;color:var(--a1)}
+.sl{display:grid;grid-template-columns:64px 1fr 34px;align-items:center;gap:6px;margin:4px 0;font-size:13px}
+input[type=range]{accent-color:var(--a1);width:100%}
+input[type=number],select{width:100%;padding:6px;border-radius:8px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit}
+input[type=color]{width:42px;height:34px;border:2px solid var(--line);border-radius:8px;padding:0;background:none;cursor:pointer}
+.pal{display:flex;gap:5px;flex-wrap:wrap}.sw{width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--line);cursor:pointer;padding:0}
+.shapes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.shapes .b{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}.shapes .b.on{border-color:var(--a1);background:var(--line)}
+.ro,.out{font:12px ui-monospace,monospace;background:var(--line);border-radius:8px;padding:7px 9px;margin-top:8px;color:var(--ink);white-space:pre-wrap}
+.card{border:2px solid var(--line);border-radius:16px;padding:10px 12px;margin-bottom:10px;display:flex;gap:10px;align-items:center}
+.card .ic{font-size:32px}.card p{margin:2px 0 0;font-size:12.5px;color:var(--mut)}.card>div{flex:1}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.opts .b{font-size:17px;padding:12px}
+#gprompt{font-size:17px;font-weight:700;margin:6px 0}#gprompt big{font-size:44px;display:block;color:var(--a1)}
+label.c{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.v{display:grid;grid-template-columns:24px 1fr 1fr 1fr;gap:6px;align-items:center;margin:4px 0}
+[hidden]{display:none!important}
+#wallet{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;font-weight:700;font-size:12.5px}#wallet span{background:var(--line);border-radius:99px;padding:3px 10px}
+input[type=text]{width:100%;padding:7px;border-radius:8px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}.chips .b{padding:4px 9px;font-size:12px}
+.shapes .b{font-size:12px;padding:7px 3px}.gl{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+#dims .sl{grid-template-columns:92px 1fr 34px}
+.info{font-size:13px;background:var(--line);border-radius:10px;padding:8px 10px;line-height:1.45}
+details.der{border:2px solid var(--line);border-radius:10px;margin:6px 0;padding:4px 9px}details.der summary{font-weight:700;cursor:pointer;font-size:13px;padding:3px 0}
+.st{display:flex;gap:7px;margin:5px 0;font-size:13px;line-height:1.4}.st i{flex:none;width:20px;height:20px;border-radius:50%;background:var(--a1);color:#fff;font-style:normal;font-weight:700;text-align:center;font-size:12px;line-height:20px}
+.res{font:700 12.5px ui-monospace,monospace;background:var(--line);border-left:4px solid var(--a3);padding:6px 8px;border-radius:6px;margin:6px 0 4px}
+.opts.f .b{font-size:14px;padding:11px 6px}#gprompt .fq{display:block;font-size:22px;color:var(--a1);margin:6px 0}
+#xp{position:absolute;left:10px;right:10px;bottom:26px;background:var(--panel);border:2px solid var(--a1);border-radius:14px;padding:9px 12px;font-size:14px;box-shadow:0 4px 0 var(--a1);max-height:62%;overflow:auto;z-index:5}
+#xp .xt{margin:4px 0;line-height:1.4}#xp .res{margin:6px 0 2px}
+@media(max-width:819px){#app.xpm{grid-template-rows:58% 42%}#xp{font-size:13px;padding:7px 10px}}
+.xs{position:sticky;top:-12px;z-index:6;background:var(--panel);border:2px solid var(--a1);border-radius:14px;padding:9px 12px;margin:0 0 10px;box-shadow:0 4px 0 var(--a1);font-size:14px}.xs .xt{margin:4px 0;line-height:1.4}
+</style></head><body>
+<div id="app">
+<div id="view"><canvas id="cv"></canvas><div id="hud" hidden></div><div id="toast"></div><div id="xp" hidden></div><div id="hint">Drag to orbit · scroll to zoom</div></div>
+<aside>
+<h1>GeoQuest 3D</h1><div id="wallet"></div>
+<nav class="tabs"><button data-tab="0" class="on">🎨 Shape</button><button data-tab="1">➡️ Vectors</button><button data-tab="2">🌊 Surfaces</button><button data-tab="3">🎮 Games</button></nav>
+
+<section id="t0"><div class="xs" id="xs" hidden></div>
+<h3>Pick a shape</h3><div class="shapes" id="shapes"></div>
+<h3>Change the lengths</h3><div id="dims"></div>
+<h3>What is it?</h3><div class="info" id="sdesc"></div>
+<div class="row" style="margin-top:8px"><button class="b ghost" data-len>📏 Show lengths on shape</button><button class="b hot" data-xstart>🎬 Explain in 3D</button><button class="b ghost" data-clear>🧹 Clear markings</button></div>
+<h3>Lengths &amp; measurements</h3><div class="out" id="smeas" style="margin-top:0"></div>
+<h3>How the formulas are derived</h3><div id="sder"></div>
+<h3>Your colour</h3><div class="row"><input type="color" id="cShape" value="#ff2e93"><div data-pal="cShape"></div></div>
+<label class="c"><input type="checkbox" id="wire"> Wireframe mode</label>
+<h3>Transform</h3><div data-ctl></div>
+</section>
+
+<section id="t1" hidden>
+<h3>Vector A</h3><div class="v"><b>A</b><input type="number" data-v value="2"><input type="number" data-v value="1"><input type="number" data-v value="0"></div>
+<h3>Vector B</h3><div class="v"><b>B</b><input type="number" data-v value="0"><input type="number" data-v value="2"><input type="number" data-v value="1"></div>
+<h3>Arrow colours</h3>
+<div class="row">A <input type="color" id="cA" value="#ff2e93"> B <input type="color" id="cB" value="#00b8e6"> A×B <input type="color" id="cC" value="#ffb800"></div>
+<div class="out" id="vout"></div>
+</section>
+
+<section id="t2" hidden>
+<h3>Function</h3>
+<select id="fn"><option value="0">Wave  z = sin(x+a)·cos(y)</option><option value="1">Ripple</option><option value="2">Saddle</option><option value="3">Egg-crate</option><option value="4">Helix curve</option><option value="5">Ellipse  x²/a² + y²/b² = 1</option><option value="6">Ellipsoid (3D ellipse)</option><option value="7">Graph  y = f(x)</option></select>
+<div id="ell" hidden><label class="sl">Semi-axis a<input type="range" id="ea" min="1" max="4" step=".5" value="3"><output id="oa"></output></label>
+<label class="sl">Semi-axis b<input type="range" id="eb" min="1" max="4" step=".5" value="1.5"><output id="ob"></output></label>
+<label class="sl" id="ecw">Semi-axis c<input type="range" id="ec" min="1" max="4" step=".5" value="2"><output id="oc"></output></label></div>
+<div id="grp" hidden><h3>Type your equation: y =</h3><input type="text" id="expr" value="sin(x+a)" autocomplete="off" spellcheck="false">
+<div class="chips"><button class="b ghost" data-expr="x^2/3">x²</button><button class="b ghost" data-expr="sin(x+a)">sin</button><button class="b ghost" data-expr="x*cos(x)/2">x·cos</button><button class="b ghost" data-expr="abs(x)">|x|</button><button class="b ghost" data-expr="sqrt(x)">√x</button><button class="b ghost" data-expr="1/x">1/x</button><button class="b ghost" data-expr="x^3/10-x">cubic</button></div>
+<small id="gerr" style="color:var(--a1)"></small><small style="color:var(--mut)">Use x, a (animated), * for multiply, ^ for powers.</small></div>
+<div class="out" id="sinfo" hidden></div>
+<h3>Animate parameter a</h3><div class="row"><button class="b hot" id="play">⏸ Pause</button><input type="range" id="aSl" min="0" max="6.28" step=".05" value="0" style="flex:1"></div>
+<h3>Colour</h3><label class="c"><input type="checkbox" id="rain" checked> 🌈 Rainbow by height</label>
+<div class="row"><input type="color" id="cS" value="#22c55e"><div data-pal="cS"></div></div>
+</section>
+
+<section id="t3" hidden>
+<div id="glist">
+<div class="card"><span class="ic">🎯</span><div><b>Pose Match</b><p>Rotate, move &amp; scale the shape to hit the target. Hit 5 targets to win — each hit adds time!</p></div><button class="b hot" data-play="1">Play</button></div>
+<div class="card"><span class="ic">🫧</span><div><b>Orb Rush</b><p>Tap glowing orbs in 3D before they pop. Pop 12 in 30s to win. Gold orbs count as 3!</p></div><button class="b hot" data-play="2">Play</button></div>
+<div class="card"><span class="ic">🧠</span><div><b>Vector Vision</b><p>See two vectors, calculate the dot or cross product. Get 7 of 10 right to win.</p></div><button class="b hot" data-play="3">Play</button></div>
+<div class="card"><span class="ic">📐</span><div><b>Calc Quest</b><p>Hypotenuse, distance, circle, triangle, trapezoid &amp; volume problems — the shape is drawn in 3D. 7 of 10 wins.</p></div><button class="b hot" data-play="4">Play</button></div>
+<div class="card"><span class="ic">🧮</span><div><b>Formula Quest</b><p>Multiple-choice: pick the right formula for the area, volume or surface of a shape – or name the shape from its formula. 7 of 10 wins.</p></div><button class="b hot" data-play="5">Play</button></div>
+<div class="out">💎 Each try costs 1 point · Win +10 · Lose −2 · Winning streak bonus +1 · Free +5 every 24 hours · Quitting mid-game counts as a loss</div>
+</div>
+<div id="gplay" hidden>
+<div id="gprompt"></div><div id="gextra"></div>
+<button class="b ghost" data-back style="margin-top:12px">← Back to games</button>
+</div>
+</section>
+</aside></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),rnd=n=>Math.floor(Math.random()*n),pick=a=>a[rnd(a.length)];
+const COLS=['#ff2e93','#ff7a1a','#ffd23f','#7cff6b','#22d3ee','#3b82f6','#a855f7','#ffffff'];
+const S={rx:0,ry:0,rz:0,px:0,py:0,pz:0,s:1};
+/* ---------- scene ---------- */
+const cv=$('cv'),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,1,.1,200);
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+scene.add(new THREE.HemisphereLight(0xffffff,0x6655aa,.9));
+const L1=new THREE.PointLight(0xff3d9a,1.1,40);L1.position.set(-6,6,4);const L2=new THREE.PointLight(0x22d3ee,1.1,40);L2.position.set(6,5,-4);scene.add(L1,L2);
+const grid=new THREE.GridHelper(20,20,0x9a8cff,0x6f62d6);grid.material.transparent=true;grid.material.opacity=.45;scene.add(grid,new THREE.AxesHelper(4));
+let th=.8,ph=1.05,rad=11;const tgt=new THREE.Vector3(0,1,0);
+function cam(){camera.position.set(tgt.x+rad*Math.sin(ph)*Math.sin(th),tgt.y+rad*Math.cos(ph),tgt.z+rad*Math.sin(ph)*Math.cos(th));camera.lookAt(tgt)}cam();
+let drag=null,moved=0;
+cv.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];moved=0;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag[0],dy=e.clientY-drag[1];drag=[e.clientX,e.clientY];moved+=Math.abs(dx)+Math.abs(dy);th-=dx*.006;ph=Math.min(3,Math.max(.15,ph-dy*.006));cam()});
+cv.addEventListener('pointerup',e=>{drag=null;if(moved<6)tap(e)});
+cv.addEventListener('wheel',e=>{e.preventDefault();rad=Math.min(26,Math.max(4,rad*(1+e.deltaY*.001)));cam()},{passive:false});
+new ResizeObserver(()=>{const r=$('view').getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/Math.max(1,r.height);camera.updateProjectionMatrix()}).observe($('view'));
+/* ---------- main shape ---------- */
+/* ---------- shapes: sizes, lengths & formula derivations ---------- */
+const PI=Math.PI,sq=Math.sqrt,F2=n=>String(Math.round(n*100)/100),P=(k,l,min,max,st,v)=>({k,l,min,max,st,v});
+const poly=a=>new THREE.Shape(a.map(([x,y])=>new THREE.Vector2(x,y)));
+const ext=s=>{const g=new THREE.ExtrudeGeometry(s,{depth:.12,bevelEnabled:false,curveSegments:64});g.computeBoundingBox();const bb=g.boundingBox;g.userData.c=[(bb.min.x+bb.max.x)/2,(bb.min.y+bb.max.y)/2];g.center();return g};
+const lathe=a=>new THREE.LatheGeometry(a.map(([x,y])=>new THREE.Vector2(x,y)),48);
+const SH={};
+/* fx = [quantity, formula, why, [common wrong formulas]] — used by the Formula Quest game */
+SH['⬜ Square']={dims:[P('s','Side s',1,4,.5,2)],
+desc:`A flat shape with 4 equal sides and 4 right angles (90°). Opposite sides are parallel. Only ONE length – the side s – describes it completely.`,
+build:({s})=>ext(poly([[0,0],[s,0],[s,s],[0,s]])),
+meas:({s})=>[`Side s = ${s}  (all 4 sides are equal)`,`Diagonal d = s√2 = ${F2(s*sq(2))}`,`Perimeter P = 4s = ${F2(4*s)}`,`Area A = s² = ${F2(s*s)}`],
+fx:[['Area','A = s²','s rows of s unit tiles',['A = 2s','A = 4s','A = s³']],['Perimeter','P = 4s','4 equal sides',['P = s²','P = 2s','P = s + 4']],['Diagonal','d = s√2','Pythagoras: d² = s² + s²',['d = 2s','d = s²','d = s√3']]],
+der:({s})=>[
+{h:'Area  A = s²',st:[`Cover the square with 1 × 1 unit tiles.`,`Each row holds s = ${s} tiles and there are s = ${s} rows.`,`Total tiles = tiles per row × rows = s × s.`],res:`A = s × s = ${s} × ${s} = ${F2(s*s)}`},
+{h:'Perimeter  P = 4s',st:[`The perimeter is the distance all the way round.`,`A square has 4 sides, each of length s.`,`P = s + s + s + s = 4s`],res:`P = 4 × ${s} = ${F2(4*s)}`},
+{h:'Diagonal  d = s√2',st:[`The diagonal cuts the square into two right triangles whose two short sides are both s.`,`Pythagoras: d² = s² + s² = 2s²`,`Take the square root: d = s√2`],res:`d = ${s} × √2 = ${F2(s*sq(2))}`}]};
+
+SH['▭ Rectangle']={dims:[P('l','Length l',1,5,.5,3),P('w','Width w',1,4,.5,2)],
+desc:`A flat shape with 4 right angles. Opposite sides are equal and parallel. The longer side is the length l, the shorter side is the width w.`,
+build:({l,w})=>ext(poly([[0,0],[l,0],[l,w],[0,w]])),
+meas:({l,w})=>[`Length l = ${l}   Width w = ${w}`,`Diagonal d = √(l²+w²) = ${F2(sq(l*l+w*w))}`,`Perimeter P = 2(l+w) = ${F2(2*(l+w))}`,`Area A = l × w = ${F2(l*w)}`],
+fx:[['Area','A = l × w','l tiles per row, w rows',['A = l + w','A = 2(l + w)','A = ½ × l × w']],['Perimeter','P = 2(l + w)','two lengths + two widths',['P = l × w','P = l + w','P = 2lw']],['Diagonal','d = √(l² + w²)','Pythagoras on l and w',['d = l + w','d = l² + w²','d = √(l × w)']]],
+der:({l,w})=>[
+{h:'Area  A = l × w',st:[`Cover the rectangle with 1 × 1 unit tiles.`,`Each row has l = ${l} tiles and there are w = ${w} rows.`,`Total tiles = l × w.`],res:`A = ${l} × ${w} = ${F2(l*w)}`},
+{h:'Perimeter  P = 2(l + w)',st:[`Going round: length, width, length, width.`,`P = l + w + l + w`,`Group the equal pairs: P = 2l + 2w = 2(l + w)`],res:`P = 2 × (${l} + ${w}) = ${F2(2*(l+w))}`},
+{h:'Diagonal  d = √(l² + w²)',st:[`The diagonal splits the rectangle into two right triangles with legs l and w.`,`Pythagoras: d² = l² + w²`,`d = √(l² + w²)`],res:`d = √(${l}² + ${w}²) = √${F2(l*l+w*w)} = ${F2(sq(l*l+w*w))}`}]};
+
+SH['▱ Parallelogram']={dims:[P('b','Base b',1,5,.5,3),P('h','Height h',1,4,.5,2),P('o','Slant shift o',0,2,.5,1)],
+desc:`A flat shape with two pairs of parallel sides. Opposite sides are equal but the angles are not 90°. Careful: the height h is the PERPENDICULAR distance between the bases – not the slanted side c.`,
+build:({b,h,o})=>ext(poly([[0,0],[b,0],[b+o,h],[o,h]])),
+meas:({b,h,o})=>{const c=sq(o*o+h*h);return[`Base b = ${b}   Height h = ${h}`,`Slanted side c = √(o²+h²) = ${F2(c)}`,`Perimeter P = 2(b+c) = ${F2(2*(b+c))}`,`Area A = b × h = ${F2(b*h)}`]},
+fx:[['Area','A = b × h','cut a triangle off one end and move it to the other: a rectangle',['A = b × c','A = ½ × b × h','A = 2(b + h)']],['Perimeter','P = 2(b + c)','opposite sides are equal',['P = 2(b + h)','P = b × c','P = 4b']],['Slant side','c = √(o² + h²)','right triangle with legs o and h',['c = o + h','c = √(b² + h²)','c = o × h']]],
+der:({b,h,o})=>{const c=sq(o*o+h*h);return[
+{h:'Area  A = b × h',st:[`Cut a right triangle off the slanted left end (its height is h).`,`Slide it to the right end – it fits exactly and the parallelogram becomes a rectangle.`,`The rectangle has width b = ${b} and height h = ${h}. Nothing was added or removed, so the area is unchanged.`,`Area = b × h (use the perpendicular height, not the slanted side).`],res:`A = ${b} × ${h} = ${F2(b*h)}`},
+{h:'Slanted side  c = √(o² + h²)',st:[`The slanted side, the height h and the sideways shift o form a right triangle.`,`Pythagoras: c² = o² + h²`],res:`c = √(${o}² + ${h}²) = ${F2(c)}`},
+{h:'Perimeter  P = 2(b + c)',st:[`Opposite sides of a parallelogram are equal: two sides of length b and two of length c.`,`P = b + c + b + c = 2(b + c)`],res:`P = 2 × (${b} + ${F2(c)}) = ${F2(2*(b+c))}`}]}};
+
+SH['📐 Triangle']={dims:[P('b','Base b',1,5,.5,3),P('h','Height h',1,4,.5,2.5)],
+desc:`A flat shape with 3 sides. This one is isosceles: the two slanted sides c are equal. The height h goes straight up from the middle of the base b.`,
+build:({b,h})=>ext(poly([[0,0],[b,0],[b/2,h]])),
+meas:({b,h})=>{const c=sq(b*b/4+h*h);return[`Base b = ${b}   Height h = ${h}`,`Slanted sides c = √((b/2)²+h²) = ${F2(c)}`,`Perimeter P = b + 2c = ${F2(b+2*c)}`,`Area A = ½ × b × h = ${F2(b*h/2)}`]},
+fx:[['Area','A = ½ × b × h','two copies make a parallelogram b × h',['A = b × h','A = ⅓ × b × h','A = ½ × (b + h)']],['Perimeter','P = b + 2c','base plus two equal slanted sides',['P = 3b','P = b × h','P = ½ × b × h']],['Slant side','c = √((b/2)² + h²)','right triangle with legs b/2 and h',['c = √(b² + h²)','c = b/2 + h','c = (b + h)/2']]],
+der:({b,h})=>{const c=sq(b*b/4+h*h);return[
+{h:'Area  A = ½ × b × h',st:[`Make a copy of the triangle and rotate it 180°.`,`Join the copy to the original: together they form a parallelogram with base b = ${b} and height h = ${h}.`,`Parallelogram area = b × h = ${F2(b*h)}.`,`The triangle is exactly half of it: A = ½ × b × h.`],res:`A = ½ × ${b} × ${h} = ${F2(b*h/2)}`},
+{h:'Slanted side  c = √((b/2)² + h²)',st:[`The height drops from the top and cuts the base into two halves of length b/2 = ${b/2}.`,`That makes a right triangle with legs b/2 and h.`,`Pythagoras: c² = (b/2)² + h²`],res:`c = √(${b/2}² + ${h}²) = ${F2(c)}`},
+{h:'Perimeter  P = b + 2c',st:[`Add all three sides: the base b and the two equal slanted sides c.`],res:`P = ${b} + 2 × ${F2(c)} = ${F2(b+2*c)}`}]}};
+
+SH['⚪ Circle']={dims:[P('r','Radius r',.5,3,.5,1.5)],
+desc:`A flat round shape where every point on the edge is the same distance – the radius r – from the centre. The diameter d = 2r goes straight across through the centre.`,
+build:({r})=>{const s=new THREE.Shape();s.absarc(0,0,r,0,2*PI,false);return ext(s)},
+meas:({r})=>[`Radius r = ${r}   Diameter d = 2r = ${F2(2*r)}`,`Circumference C = 2πr = ${F2(2*PI*r)}`,`Area A = πr² = ${F2(PI*r*r)}`],
+fx:[['Area','A = πr²','cut into sectors and rearrange into a rectangle πr × r',['A = 2πr','A = πd','A = πr']],['Circumference','C = 2πr','π = circumference ÷ diameter',['C = πr²','C = πr','C = 4πr']]],
+der:({r})=>[
+{h:'Circumference  C = 2πr',st:[`For every circle, circumference ÷ diameter is the same number. We call it π ≈ 3.14159.`,`So C = π × d.`,`The diameter is twice the radius: d = 2r, so C = π × 2r = 2πr.`],res:`C = 2 × π × ${r} = ${F2(2*PI*r)}`},
+{h:'Area  A = πr²',st:[`Cut the circle into many thin pizza-like sectors.`,`Lay them side by side, pointing up and down alternately – they form a shape that looks like a rectangle.`,`Its height is about r. Its length is about half the circumference: ½ × 2πr = πr.`,`Area = length × height = πr × r = πr²`],res:`A = π × ${r}² = ${F2(PI*r*r)}`}]};
+
+SH['⏢ Trapezoid']={dims:[P('a','Top a',1,4,.5,2),P('b','Bottom b',1,5,.5,4),P('h','Height h',1,4,.5,2)],
+desc:`A flat shape with one pair of parallel sides – the top a and the bottom b. The distance between them is the height h. The two slanted sides are called legs.`,
+build:({a,b,h})=>ext(poly([[-b/2,0],[b/2,0],[a/2,h],[-a/2,h]])),
+meas:({a,b,h})=>{const c=sq(((b-a)/2)**2+h*h);return[`Top a = ${a}   Bottom b = ${b}   Height h = ${h}`,`Slanted legs c = √(((b−a)/2)²+h²) = ${F2(c)}`,`Perimeter P = a + b + 2c = ${F2(a+b+2*c)}`,`Area A = ½(a+b) × h = ${F2((a+b)*h/2)}`]},
+fx:[['Area','A = ½(a + b) × h','two copies make a parallelogram of base a + b',['A = (a + b) × h','A = ½ × a × b × h','A = a × b']],['Perimeter','P = a + b + 2c','add all four sides',['P = 2(a + b)','P = (a + b) × h','P = a × b × c']],['Slant side','c = √(((b − a)/2)² + h²)','right triangle with legs (b−a)/2 and h',['c = √((a + b)² + h²)','c = b − a + h','c = √(a² + h²)']]],
+der:({a,b,h})=>{const c=sq(((b-a)/2)**2+h*h);return[
+{h:'Area  A = ½(a + b) × h',st:[`Make a copy of the trapezoid and flip it upside down.`,`Join the copy to the original along a slanted leg: you get a parallelogram.`,`Its base is a + b = ${a+b} and its height is h = ${h}, so its area is (a + b) × h.`,`The trapezoid is exactly half: A = ½(a + b) × h`],res:`A = ½ × (${a} + ${b}) × ${h} = ${F2((a+b)*h/2)}`},
+{h:'Slanted leg  c',st:[`Drop a perpendicular from each top corner. The leftover part of the bottom is split equally: (b − a)/2 = ${F2(Math.abs(b-a)/2)} each side.`,`Each leg is the hypotenuse of a right triangle with legs (b−a)/2 and h.`],res:`c = √(${F2(Math.abs(b-a)/2)}² + ${h}²) = ${F2(c)}`},
+{h:'Perimeter  P = a + b + 2c',st:[`Add the top, the bottom and the two equal slanted legs.`],res:`P = ${a} + ${b} + 2 × ${F2(c)} = ${F2(a+b+2*c)}`}]}};
+
+SH['🧊 Cube']={dims:[P('s','Edge s',1,4,.5,2)],
+desc:`A solid with 6 identical square faces, 12 equal edges and 8 corners. All edges meet at right angles. One length – the edge s – describes it fully.`,
+build:({s})=>new THREE.BoxGeometry(s,s,s),
+meas:({s})=>[`Edge s = ${s}  (12 equal edges, 6 square faces)`,`Face diagonal = s√2 = ${F2(s*sq(2))}`,`Space diagonal d = s√3 = ${F2(s*sq(3))}`,`Surface area SA = 6s² = ${F2(6*s*s)}`,`Volume V = s³ = ${F2(s**3)}`],
+fx:[['Volume','V = s³','a layer of s² cubes, stacked s high',['V = 3s','V = s²','V = 6s²']],['Surface area','SA = 6s²','6 square faces of area s²',['SA = s³','SA = 4s²','SA = 12s']],['Space diagonal','d = s√3','Pythagoras twice',['d = s√2','d = 3s','d = s²']]],
+der:({s})=>[
+{h:'Volume  V = s³',st:[`Fill the cube with 1 × 1 × 1 unit cubes.`,`The bottom layer is an s × s square: s² = ${s*s} cubes.`,`There are s = ${s} such layers stacked up.`,`V = s² × s = s³`],res:`V = ${s}³ = ${F2(s**3)}`},
+{h:'Surface area  SA = 6s²',st:[`A cube has 6 identical square faces.`,`Each face has area s × s = s² = ${s*s}.`,`SA = 6 × s²`],res:`SA = 6 × ${s}² = ${F2(6*s*s)}`},
+{h:'Space diagonal  d = s√3',st:[`First the diagonal of one face: f² = s² + s² so f = s√2.`,`The space diagonal, the face diagonal f and an edge s form a right triangle.`,`d² = f² + s² = 2s² + s² = 3s²`,`d = s√3`],res:`d = ${s} × √3 = ${F2(s*sq(3))}`}]};
+
+SH['📦 Cuboid']={dims:[P('l','Length l',1,5,.5,3),P('w','Width w',1,4,.5,2),P('h','Height h',1,4,.5,1.5)],
+desc:`A box-shaped solid (rectangular prism) with 6 rectangular faces. Opposite faces are identical. It needs THREE lengths: length l, width w and height h.`,
+build:({l,w,h})=>new THREE.BoxGeometry(l,h,w),
+meas:({l,w,h})=>[`Length l = ${l}  Width w = ${w}  Height h = ${h}`,`Space diagonal d = √(l²+w²+h²) = ${F2(sq(l*l+w*w+h*h))}`,`Surface area SA = 2(lw+lh+wh) = ${F2(2*(l*w+l*h+w*h))}`,`Volume V = l × w × h = ${F2(l*w*h)}`],
+fx:[['Volume','V = l × w × h','base layer l × w, stacked h high',['V = l + w + h','V = 2(lw + lh + wh)','V = l × w']],['Surface area','SA = 2(lw + lh + wh)','three pairs of rectangular faces',['SA = l × w × h','SA = 6l²','SA = lw + lh + wh']],['Space diagonal','d = √(l² + w² + h²)','Pythagoras twice',['d = l + w + h','d = √(l² + w²)','d = l² + w² + h²']]],
+der:({l,w,h})=>[
+{h:'Volume  V = l × w × h',st:[`The bottom layer is a rectangle of l × w = ${l*w} unit cubes.`,`There are h = ${h} layers.`,`V = (l × w) × h`],res:`V = ${l} × ${w} × ${h} = ${F2(l*w*h)}`},
+{h:'Surface area  SA = 2(lw + lh + wh)',st:[`The 6 faces come in 3 identical pairs.`,`Top & bottom: l × w each. Front & back: l × h each. Left & right: w × h each.`,`SA = 2lw + 2lh + 2wh = 2(lw + lh + wh)`],res:`SA = 2 × (${l*w} + ${l*h} + ${w*h}) = ${F2(2*(l*w+l*h+w*h))}`},
+{h:'Space diagonal  d = √(l² + w² + h²)',st:[`The diagonal across the base: b² = l² + w².`,`The space diagonal, b and the height h form a right triangle: d² = b² + h².`,`So d² = l² + w² + h², and d = √(l² + w² + h²).`],res:`d = √(${l*l} + ${w*w} + ${h*h}) = ${F2(sq(l*l+w*w+h*h))}`}]};
+
+SH['⚽ Sphere']={dims:[P('r','Radius r',.5,3,.5,1.5)],
+desc:`A perfectly round solid: every point on its surface is the same distance – the radius r – from the centre. It has no edges or flat faces. Diameter d = 2r.`,
+build:({r})=>new THREE.SphereGeometry(r,48,32),
+meas:({r})=>[`Radius r = ${r}   Diameter d = ${F2(2*r)}`,`Great-circle circumference = 2πr = ${F2(2*PI*r)}`,`Surface area SA = 4πr² = ${F2(4*PI*r*r)}`,`Volume V = 4/3 πr³ = ${F2(4/3*PI*r**3)}`],
+fx:[['Volume','V = 4/3 πr³','Cavalieri: hemisphere = cylinder − cone',['V = 4πr²','V = πr²h','V = ⅓πr³']],['Surface area','SA = 4πr²','four times the area of its great circle',['SA = 4/3 πr³','SA = 2πr²','SA = πr²']]],
+der:({r})=>[
+{h:'Volume  V = 4/3 πr³',st:[`Compare a hemisphere of radius r with a cylinder (radius r, height r) that has a cone scooped out of it (point at the bottom).`,`At height y above the base, the hemisphere slice is a circle of radius √(r² − y²), so its area is π(r² − y²).`,`The cylinder-minus-cone slice at the same height is a ring: outer radius r, inner radius y. Area = πr² − πy² = π(r² − y²).`,`Every slice has equal area, so the volumes are equal (Cavalieri's principle).`,`Cylinder − cone = πr²·r − ⅓πr²·r = ⅔πr³ = one hemisphere.`,`A sphere is two hemispheres: V = 2 × ⅔πr³ = 4/3 πr³`],res:`V = 4/3 × π × ${r}³ = ${F2(4/3*PI*r**3)}`},
+{h:'Surface area  SA = 4πr²',st:[`Cover the surface with many tiny flat patches. Each patch and the centre form a tiny pyramid of height r.`,`Pyramid volume = ⅓ × patch area × r. Adding all the pyramids: V = ⅓ × SA × r.`,`So SA = 3V ÷ r = 3 × (4/3 πr³) ÷ r`,`SA = 4πr²   (exactly 4 great circles of area πr²)`],res:`SA = 4 × π × ${r}² = ${F2(4*PI*r*r)}`}]};
+
+SH['🌓 Hemisphere']={dims:[P('r','Radius r',.5,3,.5,1.5)],
+desc:`Exactly half of a sphere, cut through its centre. It has one curved surface and one flat circular base, both with radius r.`,
+build:({r})=>lathe([[0,0],[r,0],...Array.from({length:24},(_,i)=>{const t=(i+1)/24*PI/2;return[r*Math.cos(t),r*Math.sin(t)]})]),
+meas:({r})=>[`Radius r = ${r}   Height = r = ${r}`,`Curved surface = 2πr² = ${F2(2*PI*r*r)}`,`Flat base = πr² = ${F2(PI*r*r)}`,`Total surface area = 3πr² = ${F2(3*PI*r*r)}`,`Volume V = ⅔πr³ = ${F2(2/3*PI*r**3)}`],
+fx:[['Volume','V = ⅔πr³','half of 4/3 πr³',['V = 4/3 πr³','V = ⅓πr³','V = πr³']],['Curved surface','CSA = 2πr²','half of 4πr²',['CSA = 4πr²','CSA = πr²','CSA = 3πr²']],['Total surface area','TSA = 3πr²','curved 2πr² + flat base πr²',['TSA = 2πr²','TSA = 4πr²','TSA = 5πr²']]],
+der:({r})=>[
+{h:'Volume  V = ⅔πr³',st:[`A hemisphere is half a sphere, and a sphere has V = 4/3 πr³.`,`(Check with slices: cylinder − cone = πr³ − ⅓πr³ = ⅔πr³.)`],res:`V = ½ × 4/3 × π × ${r}³ = ${F2(2/3*PI*r**3)}`},
+{h:'Curved surface  2πr²',st:[`The sphere's whole surface is 4πr².`,`The curved part of a hemisphere is half of that: ½ × 4πr² = 2πr².`],res:`CSA = 2 × π × ${r}² = ${F2(2*PI*r*r)}`},
+{h:'Total surface area  3πr²',st:[`Total = curved surface + flat circular base.`,`Curved: 2πr². Base circle: πr².`,`2πr² + πr² = 3πr²`],res:`TSA = 3 × π × ${r}² = ${F2(3*PI*r*r)}`}]};
+
+SH['🥫 Cylinder']={dims:[P('r','Radius r',.5,2.5,.5,1),P('h','Height h',1,4,.5,2.5)],
+desc:`A solid with two identical circular faces (top and bottom, radius r) joined by one curved side of height h. Think of a tin can.`,
+build:({r,h})=>new THREE.CylinderGeometry(r,r,h,48),
+meas:({r,h})=>[`Radius r = ${r}   Height h = ${h}`,`Curved surface = 2πrh = ${F2(2*PI*r*h)}`,`Two circles = 2πr² = ${F2(2*PI*r*r)}`,`Total surface area = 2πr(r+h) = ${F2(2*PI*r*(r+h))}`,`Volume V = πr²h = ${F2(PI*r*r*h)}`],
+fx:[['Volume','V = πr²h','stack of circles πr², h high',['V = 2πrh','V = ⅓πr²h','V = πrh']],['Curved surface','CSA = 2πrh','unrolls into a 2πr × h rectangle',['CSA = πr²h','CSA = 2πr²','CSA = πrh']],['Total surface area','TSA = 2πr(r + h)','curved side + two circles',['TSA = πr(r + h)','TSA = 2πrh','TSA = 2πr² h']]],
+der:({r,h})=>[
+{h:'Volume  V = πr²h',st:[`Slice the cylinder into many thin circular discs.`,`Each disc has the base area πr² = ${F2(PI*r*r)}.`,`Stacking them to height h gives V = (base area) × height.`],res:`V = π × ${r}² × ${h} = ${F2(PI*r*r*h)}`},
+{h:'Curved surface  2πrh',st:[`Cut the curved side along its height and unroll it flat: it becomes a rectangle.`,`The rectangle's width is the circle's circumference 2πr; its height is h.`,`Area = 2πr × h`],res:`CSA = 2 × π × ${r} × ${h} = ${F2(2*PI*r*h)}`},
+{h:'Total surface area  2πr(r + h)',st:[`Add the curved side and the two circular ends.`,`Ends: 2 × πr². Side: 2πrh.`,`TSA = 2πr² + 2πrh = 2πr(r + h)`],res:`TSA = 2π × ${r} × (${r} + ${h}) = ${F2(2*PI*r*(r+h))}`}]};
+
+SH['🔺 Cone']={dims:[P('r','Radius r',.5,2.5,.5,1.5),P('h','Height h',1,4,.5,2.5)],
+desc:`A solid with one circular base (radius r) and a curved side rising to a single point (apex). The height h is measured straight up; the slant height l is measured along the side.`,
+build:({r,h})=>new THREE.ConeGeometry(r,h,48),
+meas:({r,h})=>{const l=sq(r*r+h*h);return[`Radius r = ${r}   Height h = ${h}`,`Slant height l = √(r²+h²) = ${F2(l)}`,`Curved surface = πrl = ${F2(PI*r*l)}`,`Total surface area = πr(r+l) = ${F2(PI*r*(r+l))}`,`Volume V = ⅓πr²h = ${F2(PI*r*r*h/3)}`]},
+fx:[['Volume','V = ⅓πr²h','3 cones fill 1 cylinder',['V = πr²h','V = ⅔πr²h','V = ⅓πrh']],['Slant height','l = √(r² + h²)','Pythagoras in the side view',['l = r + h','l = √(h² − r²)','l = r² + h²']],['Curved surface','CSA = πrl','unrolls into a sector',['CSA = πr²h','CSA = 2πrl','CSA = πr²']],['Total surface area','TSA = πr(r + l)','curved side + base circle',['TSA = πrl','TSA = 2πr(r + l)','TSA = πr² + πh']]],
+der:({r,h})=>{const l=sq(r*r+h*h);return[
+{h:'Volume  V = ⅓πr²h',st:[`Take a cone and a cylinder with the same radius r and the same height h.`,`Fill the cone with water and pour it into the cylinder: it takes exactly 3 cones to fill it.`,`Cylinder volume = πr²h, so one cone is a third of that.`],res:`V = ⅓ × π × ${r}² × ${h} = ${F2(PI*r*r*h/3)}`},
+{h:'Slant height  l = √(r² + h²)',st:[`Cut the cone straight down through the apex. The height h, radius r and slant height l form a right triangle.`,`Pythagoras: l² = r² + h²`],res:`l = √(${r}² + ${h}²) = ${F2(l)}`},
+{h:'Curved surface  πrl',st:[`Unroll the curved side: it becomes a sector of a circle with radius l.`,`The arc of that sector is the base circumference, 2πr.`,`Sector area = ½ × radius × arc = ½ × l × 2πr = πrl`],res:`CSA = π × ${r} × ${F2(l)} = ${F2(PI*r*l)}`},
+{h:'Total surface area  πr(r + l)',st:[`Add the curved side πrl and the circular base πr².`,`TSA = πrl + πr² = πr(l + r)`],res:`TSA = π × ${r} × (${r} + ${F2(l)}) = ${F2(PI*r*(r+l))}`}]}};
+
+SH['🏔️ Pyramid']={dims:[P('s','Base side s',1,4,.5,2),P('h','Height h',1,4,.5,2.5)],
+desc:`A solid with a square base (side s) and 4 triangular faces that meet at one point (apex). The height h is straight up from the centre; the slant height l runs up the middle of a triangular face.`,
+build:({s,h})=>{const g=new THREE.ConeGeometry(s/sq(2),h,4,1);g.rotateY(PI/4);return g},
+meas:({s,h})=>{const l=sq(h*h+s*s/4);return[`Base side s = ${s}   Height h = ${h}`,`Slant height l = √(h²+(s/2)²) = ${F2(l)}`,`4 triangle faces = 2sl = ${F2(2*s*l)}`,`Total surface area = s²+2sl = ${F2(s*s+2*s*l)}`,`Volume V = ⅓s²h = ${F2(s*s*h/3)}`]},
+fx:[['Volume','V = ⅓ s² h','3 pyramids fill a cube',['V = s² h','V = ½ s² h','V = ⅓ s h']],['Slant height','l = √(h² + (s/2)²)','right triangle with legs h and s/2',['l = √(h² + s²)','l = h + s/2','l = √(h² − (s/2)²)']],['Total surface area','TSA = s² + 2sl','square base + 4 triangles',['TSA = s² + sl','TSA = 4sl','TSA = s² + 4sl']]],
+der:({s,h})=>{const l=sq(h*h+s*s/4);return[
+{h:'Volume  V = ⅓ s² h',st:[`A cube of side s can be cut into 3 identical square pyramids that meet at one corner. Each has base s × s and height s.`,`So each pyramid has volume s³ ÷ 3 = ⅓ × (base area) × (height).`,`This rule works for any square pyramid: V = ⅓ × s² × h.`],res:`V = ⅓ × ${s}² × ${h} = ${F2(s*s*h/3)}`},
+{h:'Slant height  l',st:[`Look at the right triangle formed by the height h, half the base s/2 = ${s/2}, and the slant height l.`,`Pythagoras: l² = h² + (s/2)²`],res:`l = √(${h}² + ${s/2}²) = ${F2(l)}`},
+{h:'Total surface area  s² + 2sl',st:[`Base: a square, s² = ${s*s}.`,`Each of the 4 faces is a triangle with base s and height l: area ½ × s × l.`,`4 × ½ × s × l = 2sl`,`TSA = s² + 2sl`],res:`TSA = ${s*s} + 2 × ${s} × ${F2(l)} = ${F2(s*s+2*s*l)}`}]}};
+
+SH['🍩 Torus']={dims:[P('R','Big radius R',1,2.5,.5,1.5),P('r','Tube radius r',.25,.75,.25,.5)],
+desc:`A doughnut-shaped solid. R is the distance from the centre of the hole to the middle of the tube; r is the radius of the tube itself.`,
+build:({R,r})=>new THREE.TorusGeometry(R,r,24,60),
+meas:({R,r})=>[`Big radius R = ${R}   Tube radius r = ${r}`,`Surface area SA = 4π²Rr = ${F2(4*PI*PI*R*r)}`,`Volume V = 2π²Rr² = ${F2(2*PI*PI*R*r*r)}`],
+fx:[['Volume','V = 2π²Rr²','tube circle πr² × path 2πR',['V = 4π²Rr','V = πr²R','V = 2πRr²']],['Surface area','SA = 4π²Rr','tube circumference 2πr × path 2πR',['SA = 2π²Rr²','SA = 2πRr','SA = 4πr²']]],
+der:({R,r})=>[
+{h:'Volume  V = 2π²Rr²',st:[`Imagine sweeping a circle of radius r once around a big circle of radius R (Pappus's theorem: volume = cross-section area × distance the centre travels).`,`Cross-section: πr² = ${F2(PI*r*r)}.`,`The centre travels 2πR = ${F2(2*PI*R)}.`,`V = πr² × 2πR = 2π²Rr²`],res:`V = 2π² × ${R} × ${r}² = ${F2(2*PI*PI*R*r*r)}`},
+{h:'Surface area  SA = 4π²Rr',st:[`Cut the tube open and unroll it: a long cylinder surface.`,`Its width is the tube circumference 2πr and its length is the path 2πR.`,`SA = 2πr × 2πR = 4π²Rr`],res:`SA = 4π² × ${R} × ${r} = ${F2(4*PI*PI*R*r)}`}]};
+
+SH['💎 Octahedron']={dims:[P('a','Edge a',1,3.5,.5,2)],
+desc:`A solid made of 8 equilateral triangles with 12 equal edges and 6 corners – like two square pyramids glued base to base.`,
+build:({a})=>new THREE.OctahedronGeometry(a/sq(2)),
+meas:({a})=>[`Edge a = ${a}  (8 equilateral triangle faces)`,`Surface area SA = 2√3·a² = ${F2(2*sq(3)*a*a)}`,`Volume V = (√2/3)·a³ = ${F2(sq(2)/3*a**3)}`],
+fx:[['Volume','V = (√2/3) a³','two square pyramids of height a/√2',['V = a³','V = (√3/4) a³','V = ⅓ a³']],['Surface area','SA = 2√3 a²','8 equilateral triangles of area (√3/4)a²',['SA = 6a²','SA = √3 a²','SA = 8a²']]],
+der:({a})=>[
+{h:'Volume  V = (√2/3)a³',st:[`Slice the octahedron through its middle: you get two identical square pyramids, each with a square base of side a.`,`The apex sits a/√2 = ${F2(a/sq(2))} above the centre of the base (half of the base diagonal a√2).`,`One pyramid: ⅓ × a² × a/√2.   Two pyramids: 2 × ⅓ × a³/√2 = (√2/3)a³`],res:`V = (√2/3) × ${a}³ = ${F2(sq(2)/3*a**3)}`},
+{h:'Surface area  SA = 2√3 a²',st:[`There are 8 faces, all equilateral triangles of side a.`,`One face: (√3/4)a².`,`SA = 8 × (√3/4)a² = 2√3 a²`],res:`SA = 2√3 × ${a}² = ${F2(2*sq(3)*a*a)}`}]};
+
+const PHI=(1+sq(5))/2;
+SH['⭐ Dodecahedron']={dims:[P('a','Edge a',.5,2.5,.5,1.5)],
+desc:`A solid made of 12 identical regular pentagons with 30 equal edges and 20 corners.`,
+build:({a})=>new THREE.DodecahedronGeometry(a*sq(3)*PHI/2),
+meas:({a})=>{const SA=3*sq(25+10*sq(5))*a*a,ri=a/2*sq((25+11*sq(5))/10);return[`Edge a = ${a}  (12 pentagon faces)`,`Surface area SA = 3√(25+10√5)·a² = ${F2(SA)}`,`Volume V = ¼(15+7√5)·a³ = ${F2(SA*ri/3)}`]},
+fx:[['Volume','V = ¼(15 + 7√5) a³','12 pyramids from the centre',['V = a³','V = ⅓ a³','V = 12a³']],['Surface area','SA = 3√(25 + 10√5) a²','12 regular pentagons',['SA = 12a²','SA = 6a²','SA = 5a²']]],
+der:({a})=>{const pent=sq(25+10*sq(5))/4*a*a,SA=12*pent,ri=a/2*sq((25+11*sq(5))/10);return[
+{h:'Surface area  SA = 3√(25+10√5)·a²',st:[`There are 12 faces; each is a regular pentagon with side a.`,`Area of one regular pentagon = ¼√(25 + 10√5) a² = ${F2(pent)}.`,`SA = 12 × ¼√(25+10√5) a² = 3√(25+10√5) a²`],res:`SA = 12 × ${F2(pent)} = ${F2(SA)}`},
+{h:'Volume  V = ¼(15+7√5)·a³',st:[`Join the centre to every face: 12 pyramids, each with a pentagon base and height equal to the inradius r_i = (a/2)√((25+11√5)/10) = ${F2(ri)}.`,`One pyramid: ⅓ × pentagon area × r_i.`,`All 12: V = ⅓ × SA × r_i, which simplifies to ¼(15+7√5)a³.`],res:`V = ⅓ × ${F2(SA)} × ${F2(ri)} = ${F2(SA*ri/3)}`}]}};
+
+const FLAT=['⬜ Square','▭ Rectangle','▱ Parallelogram','📐 Triangle','⚪ Circle','⏢ Trapezoid'],SOLID=['🧊 Cube','📦 Cuboid','⚽ Sphere','🌓 Hemisphere','🥫 Cylinder','🔺 Cone','🏔️ Pyramid','🍩 Torus','💎 Octahedron','⭐ Dodecahedron'];
+const mat=new THREE.MeshStandardMaterial({color:0xff2e93,roughness:.3,metalness:.15,side:THREE.DoubleSide});
+const obj=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat);scene.add(obj);
+let lift=.5,curShape='';const PV={};
+const btns=a=>a.map(k=>`<button class="b" data-shape="${k}">${k}</button>`).join('');
+$('shapes').innerHTML=`<div class="gl">Flat shapes (2D)</div>${btns(FLAT)}<div class="gl">Solid shapes (3D)</div>${btns(SOLID)}`;
+/* ---------- 3D length labels & step-by-step explanation ---------- */
+/* DM: [id, pointA, pointB, label] in the shape's own coordinates (flat shapes use 2D points). SHOW: which ids to light up for each derivation block. */
+const DM={
+'⬜ Square':({s})=>[['s',[0,0],[s,0],`s = ${s}`],['s2',[0,0],[0,s],`s = ${s}`],['d',[0,0],[s,s],`d = s√2 = ${F2(s*sq(2))}`]],
+'▭ Rectangle':({l,w})=>[['l',[0,0],[l,0],`l = ${l}`],['w',[0,0],[0,w],`w = ${w}`],['d',[0,0],[l,w],`d = ${F2(sq(l*l+w*w))}`]],
+'▱ Parallelogram':({b,h,o})=>[['b',[0,0],[b,0],`b = ${b}`],['h',[b+o,h],[b+o,0],`h = ${h}`],['o',[b,0],[b+o,0],`o = ${o}`],['c',[b,0],[b+o,h],`c = ${F2(sq(o*o+h*h))}`]],
+'📐 Triangle':({b,h})=>[['b',[0,0],[b,0],`b = ${b}`],['h',[b/2,0],[b/2,h],`h = ${h}`],['hb',[0,0],[b/2,0],`b/2 = ${b/2}`],['c',[b,0],[b/2,h],`c = ${F2(sq(b*b/4+h*h))}`]],
+'⚪ Circle':({r})=>[['r',[0,0],[r,0],`r = ${r}`],['d',[-r,0],[r,0],`d = 2r = ${F2(2*r)}`]],
+'⏢ Trapezoid':({a,b,h})=>[['b',[-b/2,0],[b/2,0],`b = ${b}`],['a',[-a/2,h],[a/2,h],`a = ${a}`],['h',[a/2,h],[a/2,0],`h = ${h}`],['m',[a/2,0],[b/2,0],`(b−a)/2 = ${F2(Math.abs(b-a)/2)}`],['c',[b/2,0],[a/2,h],`c = ${F2(sq(((b-a)/2)**2+h*h))}`]],
+'🧊 Cube':({s})=>{const q=s/2;return[['s',[-q,-q,q],[q,-q,q],`s = ${s}`],['sy',[q,-q,q],[q,q,q],`s = ${s}`],['sz',[q,-q,-q],[q,-q,q],`s = ${s}`],['f',[-q,-q,q],[q,q,q],`s√2 = ${F2(s*sq(2))}`],['d',[-q,-q,-q],[q,q,q],`d = s√3 = ${F2(s*sq(3))}`]]},
+'📦 Cuboid':({l,w,h})=>{const x=l/2,y=h/2,z=w/2;return[['l',[-x,-y,z],[x,-y,z],`l = ${l}`],['h',[x,-y,z],[x,y,z],`h = ${h}`],['w',[x,-y,-z],[x,-y,z],`w = ${w}`],['bd',[-x,-y,-z],[x,-y,z],`base diag = ${F2(sq(l*l+w*w))}`],['d',[-x,-y,-z],[x,y,z],`d = ${F2(sq(l*l+w*w+h*h))}`]]},
+'⚽ Sphere':({r})=>[['r',[0,0,0],[r,0,0],`r = ${r}`],['d',[-r,0,0],[r,0,0],`d = 2r = ${F2(2*r)}`]],
+'🌓 Hemisphere':({r})=>[['r',[0,0,0],[r,0,0],`r = ${r}`],['hr',[0,0,0],[0,r,0],`height = r = ${r}`]],
+'🥫 Cylinder':({r,h})=>[['r',[0,h/2,0],[r,h/2,0],`r = ${r}`],['h',[r,-h/2,0],[r,h/2,0],`h = ${h}`]],
+'🔺 Cone':({r,h})=>[['r',[0,-h/2,0],[r,-h/2,0],`r = ${r}`],['h',[0,-h/2,0],[0,h/2,0],`h = ${h}`],['l',[r,-h/2,0],[0,h/2,0],`l = ${F2(sq(r*r+h*h))}`]],
+'🏔️ Pyramid':({s,h})=>{const q=s/2;return[['s',[-q,-h/2,q],[q,-h/2,q],`s = ${s}`],['h',[0,-h/2,0],[0,h/2,0],`h = ${h}`],['hs',[0,-h/2,0],[0,-h/2,q],`s/2 = ${q}`],['l',[0,-h/2,q],[0,h/2,0],`l = ${F2(sq(h*h+q*q))}`]]},
+'🍩 Torus':({R,r})=>[['R',[0,0,0],[R,0,0],`R = ${R}`],['r',[R,0,0],[R+r,0,0],`r = ${r}`]],
+'💎 Octahedron':({a})=>{const o=a/sq(2);return[['a',[o,0,0],[0,o,0],`a = ${a}`],['ho',[0,0,0],[0,o,0],`a/√2 = ${F2(o)}`]]},
+'⭐ Dodecahedron':({a})=>{const k=a*PHI/2;return[['a',[0,k/PHI,k*PHI],[0,-k/PHI,k*PHI],`a = ${a}`]]}};
+const SHOW={
+'⬜ Square':[['s','s2'],['s','s2'],['s','s2','d']],
+'▭ Rectangle':[['l','w'],['l','w'],['l','w','d']],
+'▱ Parallelogram':[['b','h'],['o','h','c'],['b','c']],
+'📐 Triangle':[['b','h'],['hb','h','c'],['b','c']],
+'⚪ Circle':[['d','r'],['r']],
+'⏢ Trapezoid':[['a','b','h'],['m','h','c'],['a','b','c']],
+'🧊 Cube':[['s','sy','sz'],['s','sy','sz'],['s','sy','f','d']],
+'📦 Cuboid':[['l','w','h'],['l','w','h'],['l','w','h','bd','d']],
+'⚽ Sphere':[['r'],['r','d']],
+'🌓 Hemisphere':[['r','hr'],['r'],['r']],
+'🥫 Cylinder':[['r','h'],['r','h'],['r','h']],
+'🔺 Cone':[['r','h'],['r','h','l'],['r','l'],['r','l']],
+'🏔️ Pyramid':[['s','h'],['h','hs','l'],['s','l']],
+'🍩 Torus':[['R','r'],['R','r']],
+'💎 Octahedron':[['a','ho'],['a']],
+'⭐ Dodecahedron':[['a'],['a']]};
+const annG=new THREE.Group();obj.add(annG);
+const DIMC=['#ff2e93','#22d3ee','#ffd23f','#7cff6b','#a855f7','#ff7a1a'];
+let showLen=false,ex=null;
+const onShapeTab=()=>document.querySelector('.tabs .on').dataset.tab=='0';
+const exSteps=()=>{const a=[];SH[curShape].der(PV[curShape]).forEach((q,gi)=>q.st.forEach((t,si)=>a.push({gi,si,q,t,last:si==q.st.length-1,n:q.st.length})));return a};
+function lbl(t,col){const c=document.createElement('canvas'),x=c.getContext('2d'),f='bold 34px system-ui,sans-serif';x.font=f;const w=Math.ceil(x.measureText(t).width)+28;c.width=w;c.height=56;x.font=f;
+x.fillStyle='rgba(20,10,50,.9)';x.fillRect(0,0,w,56);x.strokeStyle=col;x.lineWidth=5;x.strokeRect(2,2,w-4,52);x.fillStyle='#fff';x.textBaseline='middle';x.fillText(t,14,29);
+const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));const W2=w/56*.34,k=Math.min(1,6.5/W2);sp.scale.set(W2*k,.34*k,1);sp.renderOrder=12;return sp}
+function buildAnn(g){[...annG.children].forEach(c=>{annG.remove(c);c.geometry&&c.geometry.dispose();if(c.material){c.material.map&&c.material.map.dispose();c.material.dispose()}});
+const dm=DM[curShape];if(!dm)return;let ids=null;
+if(ex!=null){const st=exSteps()[ex];ids=SHOW[curShape][st.gi]||[];g.computeBoundingBox();const top=g.boundingBox.max.y;
+const t1=lbl(st.q.h,'#ffd23f');t1.position.set(0,top+1.25,0);annG.add(t1);if(st.last){const t2=lbl(st.q.res.replace(/&amp;/g,'&'),'#7cff6b');t2.position.set(0,top+.75,0);annG.add(t2)}}else if(!showLen)return;
+const flat=FLAT.includes(curShape),c=g.userData.c||[0,0],map=v=>flat?[v[0]-c[0],v[1]-c[1],.09]:v;
+dm(PV[curShape]).forEach(([id,a,b,t],i)=>{if(ids&&!ids.includes(id))return;
+const A=new THREE.Vector3(...map(a)),B=new THREE.Vector3(...map(b)),col=DIMC[i%DIMC.length],d=B.clone().sub(A),L=d.length();if(L<1e-4)return;
+const m=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,L,8),new THREE.MeshBasicMaterial({color:col,depthTest:false,transparent:true}));
+m.position.copy(A).add(B).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());m.renderOrder=10;annG.add(m);
+[A,B].forEach(P=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),new THREE.MeshBasicMaterial({color:col,depthTest:false,transparent:true}));e.position.copy(P);e.renderOrder=11;annG.add(e)});
+const sp=lbl(t,col),mid=m.position.clone(),vert=Math.abs(d.y)>Math.abs(d.x)&&Math.abs(d.y)>Math.abs(d.z);mid.add(vert?new THREE.Vector3(.45,0,0):new THREE.Vector3(0,.25,0));sp.position.copy(mid);annG.add(sp)})}
+function lenBtn(){const b=document.querySelector('[data-len]');b.textContent=showLen?'🙈 Hide lengths':'📏 Show lengths on shape';b.classList.toggle('ghost',!showLen)}
+function drawEx(){const o=$('xp'),x=$('xs'),on=ex!=null&&onShapeTab();$('app').classList.toggle('xpm',on);o.hidden=x.hidden=!on;if(!on)return;
+const a=exSteps();ex=Math.max(0,Math.min(ex,a.length-1));const s=a[ex];
+const h=`<b>🎬 ${s.q.h}</b> <small>· step ${s.si+1} of ${s.n}</small><div class="xt">${s.t}</div>${s.last?`<div class="res">${s.q.res}</div>`:''}<div class="row" style="margin-top:6px"><button class="b ghost" data-xp="-1">◀ Back</button><button class="b hot" data-xp="1">${ex==a.length-1?'Done ✓':'Next ▶'}</button><button class="b ghost" data-xp="0">✕ Close</button></div>`;
+o.innerHTML=h;x.innerHTML=h}
+function updShape(){const sh=SH[curShape],p=PV[curShape],g=sh.build(p);
+obj.geometry.dispose();obj.geometry=g;[...obj.children].forEach(c=>{if(c===annG)return;obj.remove(c);c.geometry.dispose()});
+obj.add(new THREE.LineSegments(new THREE.EdgesGeometry(g,20),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75})));
+g.computeBoundingBox();lift=-g.boundingBox.min.y;buildAnn(g);if(ex!=null)drawEx();
+document.querySelectorAll('#dims output').forEach(o=>o.textContent=p[o.dataset.k]);
+$('smeas').textContent=sh.meas(p).join('\n');
+const op=[...document.querySelectorAll('#sder details')].map(d=>d.open);
+$('sder').innerHTML=sh.der(p).map((q,i)=>`<details${(op.length?op[i]:i==0)?' open':''}><summary>${q.h}</summary>${q.st.map((t,j)=>`<div class="st"><i>${j+1}</i><span>${t}</span></div>`).join('')}<div class="res">${q.res}</div></details>`).join('');
+sync()}
+function selectShape(k){curShape=k;const sh=SH[k],p=PV[k]||(PV[k]=Object.fromEntries(sh.dims.map(d=>[d.k,d.v])));
+document.querySelectorAll('[data-shape]').forEach(b=>b.classList.toggle('on',b.dataset.shape==k));
+$('dims').innerHTML=sh.dims.map(d=>`<label class="sl">${d.l}<input type="range" data-dim="${d.k}" min="${d.min}" max="${d.max}" step="${d.st}" value="${p[d.k]}"><output data-k="${d.k}"></output></label>`).join('');
+ex=null;drawEx();$('sdesc').textContent=sh.desc;$('sder').innerHTML='';updShape()}
+/* ---------- vectors ---------- */
+const vecG=new THREE.Group();scene.add(vecG);vecG.visible=false;
+function arrow(v,col){const l=v.length();if(l<1e-6)return;vecG.add(new THREE.ArrowHelper(v.clone().normalize(),new THREE.Vector3(),Math.min(l,7),col,.4,.22))}
+function drawVecs(a,b,cross){vecG.clear();const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b);arrow(A,$('cA').value);arrow(B,$('cB').value);if(cross)arrow(new THREE.Vector3().crossVectors(A,B),$('cC').value);return[A,B]}
+function plot(){const n=[...document.querySelectorAll('[data-v]')].map(e=>+e.value||0);const [A,B]=drawVecs(n.slice(0,3),n.slice(3),1);const d=A.dot(B),c=new THREE.Vector3().crossVectors(A,B),la=A.length(),lb=B.length();
+const ang=la&&lb?Math.acos(Math.max(-1,Math.min(1,d/(la*lb))))*180/Math.PI:0;
+$('vout').textContent=`A·B   = ${d}\nA×B   = (${c.x}, ${c.y}, ${c.z})\n|A|   = ${la.toFixed(3)}\n|B|   = ${lb.toFixed(3)}\nangle = ${ang.toFixed(1)}°\n(A×B arrow is capped at length 7)`}
+/* ---------- surfaces ---------- */
+const F=[(x,y,a)=>Math.sin(x+a)*Math.cos(y),(x,y,a)=>Math.sin(Math.hypot(x,y)*2-a*2)/(1+Math.hypot(x,y)*.4)*1.4,(x,y,a)=>(x*x-y*y)/10*Math.cos(a)*1.3,(x,y,a)=>Math.sin(x*.9)*Math.sin(y*.9+a)*1.2];
+const sGeo=new THREE.PlaneGeometry(8,8,48,48);sGeo.rotateX(-Math.PI/2);sGeo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(sGeo.attributes.position.count*3),3));
+const sMesh=new THREE.Mesh(sGeo,new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.45}));sMesh.position.y=1.6;
+const hMesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshStandardMaterial({color:0x22c55e,roughness:.3}));hMesh.position.y=.2;
+const foci=new THREE.Group();[0,1].forEach(()=>foci.add(new THREE.Mesh(new THREE.SphereGeometry(.17,16,12),new THREE.MeshStandardMaterial({color:0xffd23f,emissive:0xffb800,emissiveIntensity:.7}))));foci.position.y=3;
+const eMesh=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshStandardMaterial({vertexColors:true,roughness:.35}));eMesh.geometry.setAttribute('color',new THREE.BufferAttribute(new Float32Array(eMesh.geometry.attributes.position.count*3),3));
+const gI=new THREE.InstancedMesh(new THREE.SphereGeometry(.08,8,6),new THREE.MeshStandardMaterial({roughness:.3}),241);gI.position.y=3;
+const surfG=new THREE.Group();surfG.add(sMesh,hMesh,foci,eMesh,gI);surfG.visible=false;scene.add(surfG);
+let gf=null;
+function mkF(s){s=s.replace(/\^/g,'**').replace(/\bpi\b/gi,'PI').replace(/\be\b/g,'E').replace(/(^|[(+\-*\/,])\s*-\s*([\w.]+)\s*\*\*/g,'$1-1*$2**');
+if(!/^[\w+\-*\/().,\s]*$/.test(s)||/\.[A-Za-z_]/.test(s))return null;try{const f=new Function('x','a','with(Math){return '+s+'}');return typeof f(1,1)=='number'?f:null}catch(e){return null}}
+let aP=0,playing=true;
+function buildSurf(){const k=+$('fn').value,rb=$('rain').checked,col=new THREE.Color($('cS').value),A=+$('ea').value,B=+$('eb').value,C=+$('ec').value;
+sMesh.visible=k<4;hMesh.visible=k==4||k==5;foci.visible=k==5;eMesh.visible=k==6;gI.visible=k==7;$('ell').hidden=!(k==5||k==6);$('ecw').hidden=k!=6;$('grp').hidden=k!=7;
+$('oa').textContent=A;$('ob').textContent=B;$('oc').textContent=C;let info='';
+const hue=rb?new THREE.Color().setHSL((aP/6.283)%1,.9,.55):col;
+if(k<4){const p=sGeo.attributes.position,c=sGeo.attributes.color;for(let i=0;i<p.count;i++){const h=F[k](p.getX(i),p.getZ(i),aP);p.setY(i,h);const t=Math.min(1,Math.max(0,(h+1.4)/2.8));const cc=rb?new THREE.Color().setHSL(.88-t*.78,.95,.55):col;c.setXYZ(i,cc.r,cc.g,cc.b)}p.needsUpdate=c.needsUpdate=true;sGeo.computeVertexNormals()}
+else if(k==4){hMesh.geometry.dispose();const pts=[],R=1.6+.5*Math.sin(aP);for(let t=0;t<=6*Math.PI+.01;t+=.15)pts.push(new THREE.Vector3(R*Math.cos(t),t/4,R*Math.sin(t)));hMesh.geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),200,.13,10);hMesh.material.color.copy(hue);hMesh.position.y=.2}
+else if(k==5){hMesh.geometry.dispose();const pts=[];for(let i=0;i<96;i++){const t=i/96*2*Math.PI;pts.push(new THREE.Vector3(A*Math.cos(t),B*Math.sin(t),0))}
+hMesh.geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),160,.09,10,true);hMesh.material.color.copy(hue);hMesh.position.y=3;
+const c=Math.sqrt(Math.abs(A*A-B*B)),mj=A>=B;foci.children[0].position.set(mj?c:0,mj?0:c,0);foci.children[1].position.set(mj?-c:0,mj?0:-c,0);
+info=`x²/${A*A} + y²/${B*B} = 1\nfoci at ±${c.toFixed(2)} on the ${mj?'x':'y'}-axis\neccentricity e = ${(c/Math.max(A,B)).toFixed(3)}\narea = πab = ${(Math.PI*A*B).toFixed(2)}`}
+else if(k==6){eMesh.scale.set(A,B,C);eMesh.position.y=B+.05;eMesh.rotation.y=aP;const p=eMesh.geometry.attributes.position,c=eMesh.geometry.attributes.color;for(let i=0;i<p.count;i++){const t=(p.getY(i)+1)/2,cc=rb?new THREE.Color().setHSL(.9-t*.8,.9,.55):col;c.setXYZ(i,cc.r,cc.g,cc.b)}c.needsUpdate=true;
+info=`x²/${A*A} + y²/${B*B} + z²/${C*C} = 1\nvolume = 4/3·π·abc = ${(4/3*Math.PI*A*B*C).toFixed(2)}`}
+else{if(!gf)gf=mkF($('expr').value);$('gerr').textContent=gf?'':"Can't read that equation. ";const m=new THREE.Matrix4(),cc=new THREE.Color();
+for(let i=0;i<=240;i++){const x=-6+i*.05,y=gf?gf(x,aP):NaN,ok=Number.isFinite(y)&&Math.abs(y)<=6,q=ok?1:0;m.makeScale(q,q,q).setPosition(x,ok?y:0,0);gI.setMatrixAt(i,m);rb?cc.setHSL(.9-i/240*.8,.9,.55):cc.copy(col);gI.setColorAt(i,cc)}
+gI.instanceMatrix.needsUpdate=true;gI.instanceColor.needsUpdate=true;info=gf?`y = ${$('expr').value}\nx from −6 to 6 · a = ${aP.toFixed(2)}`:''}
+$('sinfo').hidden=!info;$('sinfo').textContent=info}
+/* ---------- transform controls (shared by Shape tab & Pose game) ---------- */
+const ctl=()=>`<div class="g3">${['x','y','z'].map(a=>`<div class="rot"><b>R${a}</b><button class="b" data-rot="r${a}" data-d="-90">−90°</button><button class="b" data-rot="r${a}" data-d="90">+90°</button></div>`).join('')}</div>`+
+[['px','Move X',-5,5,1],['py','Move Y',-3,4,1],['pz','Move Z',-5,5,1],['s','Scale',.5,3,.5]].map(([k,l,mn,mx,st])=>`<label class="sl">${l}<input type="range" data-sl="${k}" min="${mn}" max="${mx}" step="${st}" value="${k=='s'?1:0}"><output data-o="${k}"></output></label>`).join('')+`<div class="ro" data-ro></div><button class="b ghost" data-reset style="margin-top:8px">Reset pose</button>`;
+document.querySelectorAll('[data-ctl]').forEach(e=>e.innerHTML=ctl());
+document.querySelectorAll('[data-pal]').forEach(e=>e.innerHTML=COLS.map(c=>`<button class="sw" data-sw="${e.dataset.pal}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join(''));
+function sync(){obj.rotation.set(S.rx*Math.PI/180,S.ry*Math.PI/180,S.rz*Math.PI/180);obj.position.set(S.px,S.py+lift*S.s,S.pz);obj.scale.setScalar(S.s);
+document.querySelectorAll('[data-ro]').forEach(e=>e.textContent=`Rx ${S.rx}° Ry ${S.ry}° Rz ${S.rz}°\npos (${S.px}, ${S.py}, ${S.pz})  scale ${S.s}×`);
+document.querySelectorAll('[data-sl]').forEach(e=>e.value=S[e.dataset.sl]);document.querySelectorAll('[data-o]').forEach(e=>e.textContent=S[e.dataset.o]);checkPose()}
+const resetPose=()=>{Object.assign(S,{rx:0,ry:0,rz:0,px:0,py:0,pz:0,s:1});sync()};
+/* ---------- points wallet ---------- */
+const WIN=10,LOSE=2,FEE=1,DAILY=5,SB=1,DAY=864e5;
+const W={pts:0,streak:0,last:0,won:0,lost:0};
+try{Object.assign(W,JSON.parse(localStorage.getItem('gq_wallet')||'{}'))}catch(e){}
+const saveW=()=>{try{localStorage.setItem('gq_wallet',JSON.stringify(W))}catch(e){}};
+function wallet(){const l=Math.max(0,W.last+DAY-Date.now()),h=Math.floor(l/36e5),m=Math.floor(l%36e5/6e4);
+$('wallet').innerHTML=`<span>💎 ${W.pts} pts</span><span>🔥 win streak ${W.streak}</span><span>🏅 ${W.won}W / ${W.lost}L</span><span>🎁 +${DAILY} in ${h}h ${m}m</span>`;hud()}
+function daily(){if(!W.last||Date.now()-W.last>=DAY){W.pts+=DAILY;W.last=Date.now();saveW();toast(`🎁 Daily bonus +${DAILY}`)}wallet()}
+/* ---------- games ---------- */
+const G={mode:0,hits:0,goal:0,t:0,n:0,cur:null,f:'',orbs:[],spawn:0,lock:0};
+const gg=new THREE.Group(),qG=new THREE.Group();scene.add(gg,qG);
+function toast(t){const e=$('toast');e.textContent=t;e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop')}
+function hud(){const e=$('hud');if(!G.mode){e.hidden=true;return}e.hidden=false;const h=`<i>💎 ${W.pts}</i><i>🎯 ${G.hits}/${G.goal}</i>`+(G.mode>2?`<i>Q ${G.n}/10</i>`:`<i>⏱ ${Math.max(0,Math.ceil(G.t))}s</i>`);if(h!==e._h){e.innerHTML=h;e._h=h}}
+function showView(){const t=+document.querySelector('.tabs .on').dataset.tab,g=t==3;obj.visible=t==0||(g&&G.mode==1);vecG.visible=t==1||(g&&G.mode==3);surfG.visible=t==2;annG.visible=t==0;drawEx();qG.visible=g&&(G.mode==4||G.mode==5);gg.visible=g&&G.mode==2}
+/* Pose Match */
+const POOL=[];[['rx','X'],['ry','Y'],['rz','Z']].forEach(([k,n])=>[90,180,270].forEach(d=>POOL.push({k,t:`Rotate ${n} to ${d}°`,c:()=>S[k]==d})));
+[['px','X'],['py','Y'],['pz','Z']].forEach(([k,n])=>[-3,-2,2,3].forEach(v=>POOL.push({k,t:`Move ${n} to ${v}`,c:()=>S[k]==v})));
+[1.5,2,2.5,3].forEach(v=>POOL.push({k:'s',t:`Scale to ${v}×`,c:()=>Math.abs(S.s-v)<.01}));
+function nextPose(){resetPose();const g=[pick(POOL)];if(G.hits>=2){let h;do h=pick(POOL);while(h.k==g[0].k);g.push(h)}G.cur=g;$('gprompt').innerHTML=`🎯 Target:<br>${g.map(x=>x.t).join('<br>+ ')}`}
+function checkPose(){if(G.mode==1&&G.cur&&G.cur.every(g=>g.c())){G.hits++;G.t+=4;toast('✅ Nailed it! ⏱+4s');if(G.hits>=G.goal)finish(true);else{nextPose();hud()}}}
+/* Vector Vision */
+function nextVec(){if(G.n>=10)return finish(G.hits>=G.goal);G.n++;const r=()=>rnd(7)-3,a=[r(),r(),r()],b=[r(),r(),r()];drawVecs(a,b,0);
+const dot=a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cz=a[0]*b[1]-a[1]*b[0],isDot=Math.random()<.5,ans=isDot?dot:cz;
+const o=[ans,...[ans+1,ans-1,ans+2,ans-2,-ans,ans+3].filter((v,i,x)=>v!=ans&&x.indexOf(v)==i).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);
+G.cur=ans;G.f=isDot?'A·B = aₓbₓ + aᵧbᵧ + a_z b_z':'(A×B)_z = aₓbᵧ − aᵧbₓ';
+$('gprompt').innerHTML=`A=(${a}) &nbsp; B=(${b})<br>${isDot?'What is <b>A · B</b>?':'What is the <b>z-part of A × B</b>?'}`;
+$('gextra').innerHTML=`<div class="opts">${o.map(v=>`<button class="b" data-ans="${v}">${v}</button>`).join('')}</div>`;hud()}
+/* Calc Quest */
+const TRI=[[3,4,5],[5,12,13],[8,15,17],[6,8,10],[9,12,15],[7,24,25]];
+const circ=r=>Array.from({length:48},(_,i)=>[r*Math.cos(i/48*2*Math.PI),r*Math.sin(i/48*2*Math.PI)]);
+function calcQ(){const k=rnd(10),r=2+rnd(7);
+if(k==0){const[a,b,c]=pick(TRI);return{t:`📐 A right triangle has legs <b>${a}</b> and <b>${b}</b>. What is the hypotenuse?`,n:c,p:[[0,0],[a,0],[0,b]],f:'c = √(a² + b²)'}}
+if(k==1){const[a,b,c]=pick(TRI),x=rnd(4)-2,y=rnd(4)-2;return{t:`📏 Distance between P(${x}, ${y}) and Q(${x+a}, ${y+b})?`,n:c,p:[[0,0],[a,0],[a,b]],f:'d = √((x₂−x₁)² + (y₂−y₁)²)'}}
+if(k==2)return{t:`⭕ Circle of radius <b>${r}</b>. Area? (answer in π)`,n:r*r,suf:'π',p:circ(r),f:'A = πr²'};
+if(k==3)return{t:`⭕ Circle of radius <b>${r}</b>. Circumference? (answer in π)`,n:2*r,suf:'π',p:circ(r),f:'C = 2πr'};
+if(k==4){const b=2*(1+rnd(5)),h=2+rnd(8);return{t:`🔺 Triangle: base <b>${b}</b>, height <b>${h}</b>. Area?`,n:b*h/2,p:[[0,0],[b,0],[b/2,h]],f:'A = ½ × base × height'}}
+if(k==5){const l=3+rnd(7),w=2+rnd(5);return{t:`▭ Rectangle ${l} × ${w}. Area?`,n:l*w,p:[[0,0],[l,0],[l,w],[0,w]],f:'A = length × width'}}
+if(k==6){const a=2+rnd(5),b=a+2*(1+rnd(3)),h=2+rnd(6);return{t:`⏢ Trapezoid: parallel sides <b>${a}</b> &amp; <b>${b}</b>, height <b>${h}</b>. Area?`,n:(a+b)/2*h,p:[[0,0],[b,0],[(b+a)/2,h],[(b-a)/2,h]],f:'A = ½(a + b) × h'}}
+if(k==7){const s=2+rnd(4);return{t:`🧊 Cube with edge <b>${s}</b>. Volume?`,n:s**3,geo:'cube',f:'V = s³'}}
+if(k==8){const h=2+rnd(5);return{t:`🥫 Cylinder: radius <b>${r}</b>, height <b>${h}</b>. Volume? (answer in π)`,n:r*r*h,suf:'π',geo:'cyl',f:'V = πr²h'}}
+const b=2+rnd(7),h=2+rnd(6);return{t:`▱ Parallelogram: base <b>${b}</b>, height <b>${h}</b>. Area?`,n:b*h,p:[[0,0],[b,0],[b+2,h],[2,h]],f:'A = base × height'}}
+function numOpts(n,suf=''){const s=new Set([n]);[n+1,n-1,n+2,n-2,n*2,Math.round(n/2),n+4,n+5].filter(v=>v>0&&v!=n).sort(()=>Math.random()-.5).forEach(v=>{if(s.size<4)s.add(v)});return[...s].sort(()=>Math.random()-.5).map(v=>v+suf)}
+function drawQ(q){qG.clear();const M=new THREE.MeshStandardMaterial({color:pick([0xff2e93,0x22d3ee,0xffb800,0x7cff6b,0xa855f7]),roughness:.35,side:THREE.DoubleSide});let m;
+if(q.geo){m=new THREE.Mesh(q.geo=='cube'?new THREE.BoxGeometry(2.6,2.6,2.6):new THREE.CylinderGeometry(1.3,1.3,2.6,40),M);m.position.y=1.35}
+else{const xs=q.p.map(v=>v[0]),ys=q.p.map(v=>v[1]),w=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys)),s=5.5/w;const g=new THREE.ShapeGeometry(new THREE.Shape(q.p.map(v=>new THREE.Vector2(v[0]*s,v[1]*s))));g.rotateX(-Math.PI/2);g.center();m=new THREE.Mesh(g,M);m.position.y=.06}
+m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),new THREE.LineBasicMaterial({color:0xffffff})));qG.add(m)}
+function nextCalc(){if(G.n>=10)return finish(G.hits>=G.goal);G.n++;const q=calcQ();G.cur=q.n+(q.suf||'');G.f=q.f;drawQ(q);$('gprompt').innerHTML=q.t;
+$('gextra').innerHTML=`<div class="opts">${numOpts(q.n,q.suf).map(v=>`<button class="b" data-ans="${v}">${v}</button>`).join('')}</div>`;hud()}
+/* Formula Quest */
+const FQ=[];Object.entries(SH).forEach(([k,s])=>s.fx.forEach(([n,f,w,bad])=>FQ.push({k,n,f,w,bad:bad||[]})));
+const shuf=a=>a.slice().sort(()=>Math.random()-.5),shName=k=>k.replace(/^\S+\s/,'');
+function drawShapeQ(k){qG.clear();const sh=SH[k],g=sh.build(Object.fromEntries(sh.dims.map(d=>[d.k,d.v])));g.computeBoundingBox();
+const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:pick([0xff2e93,0x22d3ee,0xffb800,0x7cff6b,0xa855f7]),roughness:.35,side:THREE.DoubleSide}));
+m.position.y=-g.boundingBox.min.y;m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g,20),new THREE.LineBasicMaterial({color:0xffffff})));qG.add(m)}
+function nextFormula(){if(G.n>=10)return finish(G.hits>=G.goal);G.n++;
+const q=pick(FQ),uniq=FQ.filter(x=>x.f==q.f).length==1,byShape=uniq&&Math.random()<.4;let o;
+G.f=`${q.f}  –  ${q.w}`;
+if(!byShape){drawShapeQ(q.k);
+const set=[];const add=v=>{if(v!=q.f&&!set.includes(v))set.push(v)};
+shuf(q.bad).slice(0,2).forEach(add);shuf(FQ.filter(x=>x.n==q.n).map(x=>x.f)).forEach(add);shuf(FQ.map(x=>x.f)).forEach(add);
+o=shuf([q.f,...set.slice(0,3)]);G.cur=q.f;
+$('gprompt').innerHTML=`${q.k.split(' ')[0]} Which formula gives the <b>${q.n.toLowerCase()}</b> of a <b>${shName(q.k).toLowerCase()}</b>?`}
+else{qG.clear();const set=[];const add=v=>{if(v!=q.k&&!set.includes(v))set.push(v)};
+shuf(FQ.filter(x=>x.n==q.n).map(x=>x.k)).forEach(add);shuf(Object.keys(SH)).forEach(add);
+o=shuf([q.k,...set.slice(0,3)]);G.cur=q.k;
+$('gprompt').innerHTML=`🔎 Which shape has this ${q.n.toLowerCase()} formula?<span class="fq">${q.f}</span>`}
+$('gextra').innerHTML=`<div class="opts f">${o.map(v=>`<button class="b" data-ans="${v}">${v}</button>`).join('')}</div>`;hud()}
+/* Orb Rush */
+function spawnOrb(){const gold=Math.random()<.12,c=gold?0xffd23f:pick([0xff2e93,0x22d3ee,0xa855f7,0x7cff6b,0xff7a1a]);
+const m=new THREE.Mesh(new THREE.SphereGeometry(gold?.35:.5,24,16),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.7}));
+m.position.set(rnd(9)-4,.6+Math.random()*3.6,rnd(9)-4);m.userData={life:gold?1.6:3,max:gold?1.6:3,gold};gg.add(m);G.orbs.push(m)}
+const ray=new THREE.Raycaster();
+function tap(e){if(G.mode!=2)return;const r=cv.getBoundingClientRect();ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),camera);
+const h=ray.intersectObjects(G.orbs)[0];if(h){const o=h.object,g=o.userData.gold;G.hits+=g?3:1;toast(g?'🌟 +3':'+1');gg.remove(o);G.orbs.splice(G.orbs.indexOf(o),1);hud();if(G.hits>=G.goal)finish(true)}}
+/* flow */
+function start(m){if(W.pts<FEE){toast(`Need ${FEE} 💎 to play`);return}
+W.pts-=FEE;saveW();Object.assign(G,{mode:m,hits:0,n:0,cur:null,lock:0,goal:m==1?5:m==2?12:7,t:m==1?60:30});
+$('glist').hidden=true;$('gplay').hidden=false;$('gextra').innerHTML='';
+if(m==1){nextPose();$('gextra').innerHTML=ctl()}
+if(m==2){G.spawn=0;$('gprompt').innerHTML='🫧 Tap the orbs!<br><small>Pop 12 in 30 seconds · gold counts as 3</small>'}
+if(m==3)nextVec();if(m==4)nextCalc();if(m==5)nextFormula();
+showView();sync();hud();wallet()}
+function finish(win){const m=G.mode;if(!m)return;G.orbs.forEach(o=>gg.remove(o));G.orbs=[];G.mode=0;qG.clear();let msg;
+if(win){W.streak++;const b=W.streak>1?SB:0;W.pts+=WIN+b;W.won++;msg=`🏆 You won!<big>+${WIN+b}</big>${b?`10 + ${b} streak bonus`:'points'}`}
+else{W.streak=0;W.lost++;W.pts=Math.max(0,W.pts-LOSE);msg=`😵 You lost<big>−${LOSE}</big>points · streak reset`}
+saveW();$('gprompt').innerHTML=msg+`<br><small>Score: ${G.hits}/${G.goal}</small>`;$('gextra').innerHTML=`<button class="b hot" data-play="${m}">Play again (−${FEE} 💎)</button>`;
+$('glist').hidden=true;$('gplay').hidden=false;showView();wallet()}
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+if(d.tab!=null){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b==t));[0,1,2,3].forEach(i=>$('t'+i).hidden=i!=+d.tab);showView();if(d.tab==1)plot();if(d.tab==2)buildSurf()}
+if(d.shape)selectShape(d.shape);
+if(d.len!=null){if(ex!=null){ex=null;showLen=true}else showLen=!showLen;lenBtn();drawEx();buildAnn(obj.geometry)}
+if(d.clear!=null){ex=null;showLen=false;lenBtn();drawEx();buildAnn(obj.geometry)}
+if(d.xstart!=null){ex=0;showLen=false;lenBtn();drawEx();buildAnn(obj.geometry)}
+if(d.xp!=null){const v=+d.xp;if(v==0)ex=null;else{ex+=v;if(ex>=exSteps().length)ex=null;if(ex<0)ex=0}drawEx();buildAnn(obj.geometry)}
+if(d.rot){S[d.rot]=((S[d.rot]+ +d.d)%360+360)%360;sync()}
+if(d.reset!=null)resetPose();
+if(d.sw){const i=$(d.sw);i.value=d.c;i.dispatchEvent(new Event('input',{bubbles:true}))}
+if(d.expr){$('expr').value=d.expr;gf=mkF(d.expr);buildSurf()}
+if(d.play)start(+d.play);
+if(d.back!=null){if(G.mode)finish(false);else{$('gplay').hidden=true;$('glist').hidden=false;showView()}}
+if(d.ans!=null&&G.mode>2&&!G.lock){G.lock=1;const ok=d.ans===String(G.cur);if(ok){G.hits++;toast('✅ Correct!')}else toast(`❌ It was ${G.cur}`);t.style.outline=`3px solid ${ok?'var(--a4)':'var(--a1)'}`;
+$('gprompt').insertAdjacentHTML('beforeend',`<br><small>💡 ${G.f}</small>`);hud();
+setTimeout(()=>{G.lock=0;if(!G.mode)return;if(G.hits>=G.goal)finish(true);else if(G.n-G.hits>10-G.goal)finish(false);else [0,0,0,nextVec,nextCalc,nextFormula][G.mode]()},1300)}
+if(t.id=='play'){playing=!playing;t.textContent=playing?'⏸ Pause':'▶ Play'}});
+document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
+if(d.sl){S[d.sl]=+t.value;sync()}
+if(d.dim){PV[curShape][d.dim]=+t.value;updShape()}
+if(t.id=='cShape')mat.color.set(t.value);if(t.id=='wire')mat.wireframe=t.checked;
+if(d.v!=null||/^c[ABC]$/.test(t.id))plot();
+if(t.id=='expr')gf=mkF(t.value);
+if(['cS','rain','fn','expr'].includes(t.id)||/^e[abc]$/.test(t.id))buildSurf();
+if(t.id=='aSl'){aP=+t.value;buildSurf()}});
+/* ---------- loop ---------- */
+let last=performance.now();
+function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;
+if(playing&&!$('t2').hidden){aP=(aP+dt*1.1)%6.283;$('aSl').value=aP;buildSurf()}
+if(G.mode==1||G.mode==2){G.t-=dt;if(G.t<=0)finish(G.hits>=G.goal);else hud()}
+if(G.mode==2){G.spawn-=dt;if(G.spawn<=0&&G.orbs.length<6){spawnOrb();G.spawn=.65}
+for(const o of [...G.orbs]){o.userData.life-=dt;const k=o.userData.life/o.userData.max;o.scale.setScalar(.6+.4*Math.abs(Math.sin(now/180))*Math.min(1,k*3));o.position.y+=Math.sin(now/400+o.id)*.004;if(k<=0){gg.remove(o);G.orbs.splice(G.orbs.indexOf(o),1)}}}
+L1.position.x=-6+Math.sin(now/1500)*3;L2.position.z=-4+Math.cos(now/1700)*3;renderer.render(scene,camera)}
+selectShape('🧊 Cube');plot();buildSurf();showView();daily();setInterval(daily,6e4);requestAnimationFrame(loop);
+</script></body></html>
